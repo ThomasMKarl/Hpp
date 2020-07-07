@@ -1,0 +1,64 @@
+\documentclass[12pt]{scrartcl}
+\usepackage[ngerman]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage{setspace}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{amsmath}
+\usepackage{pgf}
+\usepackage{caption}
+\usepackage{import}
+
+\pagestyle{fancy}
+\fancyhead[L]{\large Paralleles Ising Modell}
+\fancyhead[R]{Thomas Karl}
+\fancyfoot[C]{Seite \arabic{page} von \pageref{LastPage}}
+\renewcommand{\footrulewidth}{0.4pt}
+
+%\usepackage[colorlinks=true,
+%            linkcolor=black,
+%            urlcolor=blue,
+%            citecolor=gray]{hyperref}
+            
+\setlength\parindent{0pt}
+
+\begin{document}
+
+Im Ising-Modell wird angenommen, dass die Spins, welche das magnetische Moment der Atome oder Ionen bestimmen, nur zwei diskrete Zustände annehmen können (Spinwert $\pm 1$). Die Richtung im Raum bleibt aber offen.
+
+Wir minimieren mittels Metropolis-Algorithmus den Hamiltonian:
+\begin{equation}
+H = -\frac{1}{2}\sum_{ij} J_{ij}s^z_is^z_j - B\sum_{\text{i=1}}^Vs_i^{z} ~~~ \text{mit} ~ s_i^z = \pm 1
+\end{equation}
+
+In diesem Fall ist die Kopplungskonstante $J_{ij}=J=1$ und das Magnetfeld ist $B = 0$. 
+
+Der Anfangszustand ist zufaellig gew\"hlt: In zwei Dimensionen mit periodischen Randbedingungen sind insgesamt $V = N_x\cdot N_y$ (Volumen) Spins entweder $1$ oder $-1$. 
+
+Beim Metropolis-Algorithmus werden zuf\"allig Spins ge\"ndert um neue Konfigurationen zu erzeugen. Eine neue Konfiguration wird mit der Wahrscheinlichkeit 
+
+\begin{equation}
+p = \min\left( 1, \exp\left(-\frac{\Delta E}{k_b\cdot T}\right) \right)
+\end{equation}
+
+angenommen. $\Delta E$ ist dabei die Differenz der Energie zum vorherigen Zustand, $k_b$ die Boltzmann-Konstante und $T$ die Temperatur, die auf $T=\frac{1}{10k_b}$ gesetzt wird. Bei dieser Temperatur sollten sich alle Spins gleich ausrichten und die Simulation liefert pro Volumen die Gesamtenergie $-2$.
+
+Es wurden jeweils 10 Simulationen mit 10000 Schritten durchgef\"uhrt und die Laufzeit gemittelt. Diese wurden doppelt-logarithmisch f\"ur verschiedene Kernzahlen gegen die L\"ange des Gitters $s=N_x=N_y=\sqrt{V}$ aufgetragen (\textit{siehe Graph}).
+
+Der Algorithmus funktioniert nur, falls es sich bei der Anzahl der Kerne um eine Quadratzahl handelt.
+
+Da mit $s$ das Volumen quadratisch steigt, also auch die Zahl der zu bearbeitenden Spins, hat der Algorithmus das Laufzeitverhalten $\mathcal{O}(s^2)$.
+
+Die Fitkonstante im Exponenten liefert nicht wie erwartet $2$. Das liegt daran, dass beim Fitten davon ausgegangen wurde, dass Anteile, die linear mit $s$ wachsen, vernachl\"ssigbar seien. Gerade f\"ur kleine Gittergr\"o\ss en trifft dies aber nicht zu. 
+
+Setzt man den Exponenten auf einen festen Wert und fittet nur den Vorfaktor, so ergeben sich Speedups von 3,5 und 4,84. Die Abweichung zum maximalen Speedup 6 im zweiten Fall ergibt sich dadurch, dass die Simulation mit einer Quadratzahl von Prozessen (also 9) gestartet werden muss. Bei der H\"alfte der Zeit bleiben also die H\"alfte der Kerne unbesch\"aftigt ($6 - 1,5 = 4,5$).
+
+\begin{figure}
+\scalebox{1.1}{\input{ising.pgf}}
+\caption*{Verbrauchte Rechenzeit gegen die L\"ange des Gitters f\"ur alle drei Kernzahlen und Fitfunktionen auf doppelt-logarithmischer Skala.}
+\end{figure}
+
+\end{document}

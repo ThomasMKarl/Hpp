@@ -1,0 +1,24 @@
+debug magn
+scripts
+plots
+error?
+
+assertion
+
+matrix J
+vector B
+matix B
+
+worm
+potts?
+2d qt
+2d mpi
+matrix energy
+graphics/opengl
+
+quantum heisenberg
+
+hdf5 import/export
+
+worm qt
+

@@ -1,0 +1,113 @@
+@startuml
+set namespaceSeparator ::
+skinparam ArrowColor #000000
+skinparam ClassBorderColor #000088
+skinparam classAttributeIconSize 0
+
+class HB::Index #DDDDDD {
+  +x : size_t
+  +y : size_t
+  +z : size_t
+}
+
+class HB::NB #DDDDDD {
+  +up : size_t
+  +right : size_t
+  +back : size_t
+  +down : size_t
+  +left : size_t
+  +front : size_t
+}
+
+class HB::Grid #DDDDDD {
+  -mGridSize : dim3
+  -mSpin : Spin<T>
+  -mGrid : std::vector<Spin<T>>
+  -mTable : std::vector<NB>
+  +getGridSize() : dim3
+  +setGridSize(in gridSize) : void
+  +getGridValue(in index) : Spin<T>
+  +getNeighbours(in index) : NB
+  +coldStart() : void
+  +hostStart() : void
+  +saveGrid(in path) : void
+}
+
+class "HB::Spin<T>" as HB::Spin_t #DDDDDD {
+  +x : T
+  +y : T
+  +z : T
+}
+
+abstract class HB::Model #DDDDDD {
+  -mB : dim3
+  -mSpin : Spin<T>
+  -mGrid : Grid*
+  +getBfield() : dim3
+  +virtual calcEnergy() : float
+  +virtual calcEnergy(in index) : float
+  +virtual calcMagn() : float
+  +virtual getGrid() : Grid*
+  -virtual flip(in value) : void
+}
+class HB::Heisenberg::Heisenberg #DDDDDD {
+  -mB : dim3
+  -mSpin : Spin<float>
+  -mGrid : Grid*
+  +getBfield() : dim3
+  +calcEnergy() : float
+  +calcEnergy(in index) : float
+  +calcMagn() : float
+  +getGrid() : Grid*
+  -flip(in value) : void
+}
+class HB::XY::XY #DDDDDD {
+  -mB : dim3
+  -mSpin : Spin<float>
+  -mGrid : Grid*
+  +getBfield() : dim3
+  +calcEnergy() : float
+  +calcEnergy(in index) : float
+  +calcMagn() : float
+  +getGrid() : Grid*
+  -flip(in value) : void
+}
+class HB::Potts::Potts #DDDDDD {
+  -mB : dim3
+  -mSpin : Spin<float>
+  -mGrid : Grid*
+  +getBfield() : dim3
+  +calcEnergy() : float
+  +calcEnergy(in index) : float
+  +calcMagn() : float
+  +getGrid() : Grid*
+  -flip(in value) : void
+}
+class HB::Ising::Ising #DDDDDD {
+  -mB : dim3
+  -mSpin : Spin<short int>
+  -mGrid : Grid*
+  +getBfield() : dim3
+  +calcEnergy() : float
+  +calcEnergy(in index) : float
+  +calcMagn() : float
+  +getGrid() : Grid*
+  -flip(in value) : void
+}
+
+HB::Model <|-- HB::Ising::Ising
+HB::Model <|-- HB::Potts::Potts
+HB::Model <|-- HB::XY::XY
+HB::Model <|-- HB::Heisenberg::Heisenberg
+HB::Grid *-- HB::Model
+HB::NB <.. HB::Grid
+HB::Grid *-- HB::Spin_t
+HB::Model *-- HB::Spin_t
+HB::Heisenberg::Heisenberg *-- HB::Spin_t
+HB::XY::XY *-- HB::Spin_t
+HB::Potts::Potts *-- HB::Spin_t
+HB::Ising::Ising *-- HB::Spin_t
+HB::Index <.. HB::Model
+HB::Index <.. HB::Grid
+
+@enduml

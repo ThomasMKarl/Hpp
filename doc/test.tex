@@ -1,0 +1,17 @@
+\documentclass{scrartcl}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.17}
+\usepackage{aeguill}
+
+\usepackage{lmodern}
+\usepackage{lipsum}
+
+\begin{document}
+    \lipsum[1]
+    \begin{figure}[h]
+        \centering
+        \scalebox{0.65}{\input{test.latex}}
+        \caption{Ein UML Diagramm}
+    \end{figure}
+    \lipsum[1] 
+\end{document}
