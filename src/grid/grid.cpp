@@ -1,11 +1,8 @@
-#include "include/grid/grid.h"
+#include "grid/grid.h"
 
-void HB::hotStart() //all spins 1
-{
-    unsigned int n = mGridSize.x*mGridSize.y*mGridSize.z;
-    
-    mGrid.resize(n);
-    
+template<class T>
+void HB::Grid<T>::hotStart() //all spins 1
+{  
     #pragma omp parallel
     {
 	gsl_rng *rng;
@@ -14,80 +11,71 @@ void HB::hotStart() //all spins 1
         gsl_rng_set(rng,seed);
 
         #pragma omp for
-        for(unsigned int i = 0; i < n; ++i)
+        for(size_t i = 0; i < this.mGridSize.x*this.mGridSize.y*this.mGridSize.z; ++i)
 	{
-	    mGrid[i].x = 2.0*M_PI*gsl_rng_uniform(rng);
-	    mGrid[i].y = 2.0*M_PI*gsl_rng_uniform(rng);
-	    mGrid[i].z = 2.0*M_PI*gsl_rng_uniform(rng);
+	    this.mGrid[i].x   = 2.0*M_PI*gsl_rng_uniform(rng);
+	    this.mGrid[i].y = 2.0*M_PI*gsl_rng_uniform(rng);
 	}
     }
 }
 
-void HB::coldStart() //all spins 1
-{
-    unsigned int n = m_Nx*m_Ny*m_Nz;
-    
-    mgrid_phi.resize(n);
-    mgrid_theta.resize(n);
-    
+template<class T>
+void HB::Grid<T>::coldStart() //all spins 1
+{ 
     #pragma omp parallel for
-    for(unsigned int i = 0; i < n; ++i)
+    for(size_t i = 0; i < this.mGridSize.x*this.mGridSize.y*this.mGridSize.z; ++i)
     {
-	mgrid_phi[i]   = 0.0;
-	mgrid_theta[i] = 0.5*M_PI;
+	this.mGrid[i].x   = 0.0;
+	this.mGrid[i].y = 0.5*M_PI;
     }   
-    
-    mE = compute_energy(); //store initial value for energy
 }
 
-void HB::neighbourTab()
+template<class T>
+void HB::Grid<T>::neighbourTab()
 {
-    unsigned int n = m_Nx*m_Ny*m_Nz;
-    
-    mTable.resize(n);
+    size_t m_Nx = this.mGridSize.x;
+    size_t m_Ny = this.mGridSize.y;
+    size_t m_Nz = this.mGridSize.z;
+    size_t n = m_Nx*m_Ny*m_Nz;
+    this.mTable.resize(n);
         
     #pragma omp parallel
     {	
-        unsigned int i;
-	unsigned int j = 0;
-	unsigned int k = 0;
+        size_t i, j, k;
 	
 	#pragma omp for
-        for(unsigned int h = 0; h < n; ++h)
+        for(size_t h = 0; h < n; ++h)
         {
             i = h%m_Nx;
-	    if(dim > 1)
-	    {
-                j = h/m_Nx%m_Ny;
-	        if(dim > 2)
-	        {
-                    k = h/(m_Nx*m_Ny);
-	        }
-	    }
-            //std::cout << h << " " << i << " " << j << " " << k << "\n";
 	    
-            if(i == 0)      mmap[0][m_Ny*m_Nx*k + m_Nx*j + i] = m_Ny*m_Nx*k + m_Nx*j + m_Nx - 1;
-            else            mmap[0][m_Ny*m_Nx*k + m_Nx*j + i] = m_Ny*m_Nx*k + m_Nx*j + i    - 1;
+            if(i == 0)      mTable[m_Ny*m_Nx*k + m_Nx*j + i].left = m_Ny*m_Nx*k + m_Nx*j + m_Nx - 1;
+            else            mTable[m_Ny*m_Nx*k + m_Nx*j + i].left = m_Ny*m_Nx*k + m_Nx*j + i    - 1;
 
-            if(i == m_Nx-1) mmap[1][m_Ny*m_Nx*k + m_Nx*j + i] = m_Ny*m_Nx*k + m_Nx*j;
-            else            mmap[1][m_Ny*m_Nx*k + m_Nx*j + i] = m_Ny*m_Nx*k + m_Nx*j + i    + 1;
+            if(i == m_Nx-1) mTable[m_Ny*m_Nx*k + m_Nx*j + i].right = m_Ny*m_Nx*k + m_Nx*j;
+            else            mTable[m_Ny*m_Nx*k + m_Nx*j + i].right = m_Ny*m_Nx*k + m_Nx*j + i    + 1;
 
-	    if(dim > 1)
+	    if(mDim > 1)
 	    {
-                if(j == 0)      mmap[2][m_Ny*m_Nx*k + m_Nx*j + i] = m_Ny*m_Nx*k + m_Nx*(m_Ny-1) + i;
-                else            mmap[2][m_Ny*m_Nx*k + m_Nx*j + i] = m_Ny*m_Nx*k + m_Nx*(j-1)    + i;
+	        j = h/m_Nx%m_Ny;
+		
+                if(j == 0)      mTable[m_Ny*m_Nx*k + m_Nx*j + i].up = m_Ny*m_Nx*k + m_Nx*(m_Ny-1) + i;
+                else            mTable[m_Ny*m_Nx*k + m_Nx*j + i].up = m_Ny*m_Nx*k + m_Nx*(j-1)    + i;
 	
-                if(j == m_Ny-1) mmap[3][m_Ny*m_Nx*k + m_Nx*j + i] = m_Ny*m_Nx*k + i;
-                else            mmap[3][m_Ny*m_Nx*k + m_Nx*j + i] = m_Ny*m_Nx*k + m_Nx*(j+1) + i;
+                if(j == m_Ny-1) mTable[m_Ny*m_Nx*k + m_Nx*j + i].down = m_Ny*m_Nx*k + i;
+                else            mTable[m_Ny*m_Nx*k + m_Nx*j + i].down = m_Ny*m_Nx*k + m_Nx*(j+1) + i;
 
-	        if(dim > 2)
+	        if(mDim > 2)
 	        {
-                    if(k == 0)      mmap[4][m_Ny*m_Nx*k + m_Nx*j + i] = m_Ny*m_Nx*(m_Nz-1) + m_Nx*j + i;
-                    else            mmap[4][m_Ny*m_Nx*k + m_Nx*j + i] = m_Ny*m_Nx*(k-1)    + m_Nx*j + i;
+		    k = h/(m_Nx*m_Ny);
+		    
+                    if(k == 0)      mTable[m_Ny*m_Nx*k + m_Nx*j + i].front = m_Ny*m_Nx*(m_Nz-1) + m_Nx*j + i;
+                    else            mTable[m_Ny*m_Nx*k + m_Nx*j + i].front = m_Ny*m_Nx*(k-1)    + m_Nx*j + i;
 	
-                    if(k == m_Nz-1) mmap[5][m_Ny*m_Nx*k + m_Nx*j + i] = m_Nx*j + i;
-                    else            mmap[5][m_Ny*m_Nx*k + m_Nx*j + i] = m_Ny*m_Nx*(k+1) + m_Nx*j + i;
+                    if(k == m_Nz-1) mTable[m_Ny*m_Nx*k + m_Nx*j + i].back = m_Nx*j + i;
+                    else            mTable[m_Ny*m_Nx*k + m_Nx*j + i].back = m_Ny*m_Nx*(k+1) + m_Nx*j + i;
 	        }
+		
+		//std::cout << h << " " << i << " " << j << " " << k << "\n";
 	    }
 
 	//std::cout << mmap[0][m_Ny*m_Nx*k + m_Nx*j + i]<<" "<<mmap[1][m_Ny*m_Nx*k + m_Nx*j + i]<<" "<<mmap[2][m_Ny*m_Nx*k + m_Nx*j + i]<<" "<<mmap[3][m_Ny*m_Nx*k + m_Nx*j + i]<<" "<<mmap[4][m_Ny*m_Nx*k + m_Nx*j + i]<<" "<<mmap[5][m_Ny*m_Nx*k + m_Nx*j + i]<<"\n\n";
@@ -95,6 +83,44 @@ void HB::neighbourTab()
     }
 }
 
-void HB::saveGrid(std::string path)
+template<class T>
+herr_t HB::Grid<T>::saveGrid(std::string path)
 {
+    herr_t status;
+
+    size_t dims[3];
+    dims[0] = this.mGridSize.x;
+    dims[1] = this.mGridSize.y;
+    dims[2] = this.mGridSize.z;
+    auto dataspace_id = H5Screate_simple(3, dims, NULL);
+
+    hid_t file_id = H5Fcreate (path.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT); 
+
+    hid_t dataset_id, spinid = H5Tcreate(H5T_COMPOUND, sizeof(T));
+    if(sizeof(T) == 8)
+    {
+        H5Tinsert(spinid, "spin",   HOFFSET(T,x), H5T_NATIVE_SHORT);
+	dataset_id = H5Dcreate(file_id, "/dset", H5T_STD_I16BE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    }
+    else
+    {
+        H5Tinsert(spinid, "phi",   HOFFSET(T,x), H5T_NATIVE_FLOAT);
+        H5Tinsert(spinid, "theta", HOFFSET(T,y), H5T_NATIVE_FLOAT);
+	dataset_id = H5Dcreate(file_id, "/dset", H5T_IEEE_F32BE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);	
+    }
+
+    size_t i, j, k;
+    for(size_t h = 0; h < dims[0]*dims[1]*dims[2]; ++h)
+    {
+        i = h%dims[0];
+        j = h/dims[0]%dims[1];
+        k = h/(dims[0]*dims[1]);
+	if(H5Dwrite(dataset_id, spinid, H5S_ALL, H5S_ALL, H5P_DEFAULT, this.mGrid[h]) < 0) return status;
+    }
+
+    if(H5Dclose(dataset_id)   < 0) return status;
+    if(H5Sclose(dataspace_id) < 0) return status;
+    if(H5Fclose(file_id)      < 0) return status;
+
+    return status;
 }

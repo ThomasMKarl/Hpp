@@ -4,12 +4,6 @@ skinparam ArrowColor #000000
 skinparam ClassBorderColor #000088
 skinparam classAttributeIconSize 0
 
-class HB::Index #DDDDDD {
-  +x : size_t
-  +y : size_t
-  +z : size_t
-}
-
 class HB::NB #DDDDDD {
   +up : size_t
   +right : size_t
@@ -19,95 +13,106 @@ class HB::NB #DDDDDD {
   +front : size_t
 }
 
-class HB::Grid #DDDDDD {
+class "HB::Grid<class T>" as HB::Grid_t #DDDDDD {
   -mGridSize : dim3
-  -mSpin : Spin<T>
-  -mGrid : std::vector<Spin<T>>
-  -mTable : std::vector<NB>
+  -mGrid : thrust::host_vector<T>
+  -mTable : thrust::host_vector<HB::NB>
+  -d_mGrid : thrust::device_vector<T>
+  -d_mTable : thrust::device_vector<HB::NB>
+  -neighbourTab()
+  +Grid(in dim : short, in gridSize : dim3)
   +getGridSize() : dim3
-  +setGridSize(in gridSize) : void
-  +getGridValue(in index) : Spin<T>
-  +getNeighbours(in index) : NB
-  +coldStart() : void
-  +hostStart() : void
-  +saveGrid(in path) : void
+  +setGridSize(in gridSize : dim3)
+  +getSpin(in index : dim3) : T
+  +setSpin(in index : dim3, in s : T)
+  +getNeighbours(in index : dim3) : HB::NB
+  +getDim() : short int
+  +setDim(short int dim)
+  +coldStart()
+  +hostStart()
+  +saveGrid(in path)
+  +getDeviceGrid() : T*
+  +getDeviceTable() : HB::NB*
+  +upload()
+  +download()
 }
 
-class "HB::Spin<T>" as HB::Spin_t #DDDDDD {
+class "HB::Spin<typename T>" as HB::Spin_t #DDDDDD {
   +x : T
   +y : T
-  +z : T
 }
 
-abstract class HB::Model #DDDDDD {
-  -mB : dim3
-  -mSpin : Spin<T>
-  -mGrid : Grid*
-  +getBfield() : dim3
-  +virtual calcEnergy() : float
-  +virtual calcEnergy(in index) : float
-  +virtual calcMagn() : float
-  +virtual getGrid() : Grid*
-  -virtual flip(in value) : void
+class "HB::Model<class T>" as HB::Model_t #DDDDDD {
+  #mB : float3
+  #mJ : double
+  #mGrid : HB::Grid<T>*
+  
+  #virtual calcEnergy(in index : dim3) : double
+  #virtual flip(in index : dim3, in rng : gsl_rng*)
+
+  +Model(in J : double, in B : float3)
+  +Model(in J : double, in B: float3, in grid : HB::Grid<T>*)
+  +virtual calcEnergy() : double
+  +virtual double calcMagn() :
+  +getBfield() : float3
+  +getCoupling() : double
+  +getGrid() : HB::Grid<T>*
+  +void setBfield(in B : float3)
+  +void setCoupling(in J : double)
+  +setGrid(in grid : HB::Grid<T>*)
 }
 class HB::Heisenberg::Heisenberg #DDDDDD {
-  -mB : dim3
-  -mSpin : Spin<float>
-  -mGrid : Grid*
-  +getBfield() : dim3
-  +calcEnergy() : float
-  +calcEnergy(in index) : float
-  +calcMagn() : float
-  +getGrid() : Grid*
-  -flip(in value) : void
-}
-class HB::XY::XY #DDDDDD {
-  -mB : dim3
-  -mSpin : Spin<float>
-  -mGrid : Grid*
-  +getBfield() : dim3
-  +calcEnergy() : float
-  +calcEnergy(in index) : float
-  +calcMagn() : float
-  +getGrid() : Grid*
-  -flip(in value) : void
-}
-class HB::Potts::Potts #DDDDDD {
-  -mB : dim3
-  -mSpin : Spin<float>
-  -mGrid : Grid*
-  +getBfield() : dim3
-  +calcEnergy() : float
-  +calcEnergy(in index) : float
-  +calcMagn() : float
-  +getGrid() : Grid*
-  -flip(in value) : void
+  -mB : float3
+  -mJ : double
+  -mGrid : HB::Grid<Spin<float>>*
+  
+  -calcEnergy(in index : dim3) : double
+  -flip(in index : dim3, in rng : gsl_rng*)
+
+  +Ising(in J : double, in B : float3)
+  +Ising(in J : double, in B : float3, in grid : HB::Grid<Spin<float>>*)
+  +Ising(in J : double, in B : float3, in grid : HB::Grid<Spin<float>>*, in hc : bool)
+  +calcEnergy() : double
+  +double calcMagn() :
+  +getBfield() : float3
+  +getCoupling() : double
+  +getGrid() : HB::Grid<Spin<float>>*
+  +void setBfield(in B : float3)
+  +void setCoupling(in J : double)
+  +setGrid(in grid : HB::Grid<Spin<float>>*)
 }
 class HB::Ising::Ising #DDDDDD {
-  -mB : dim3
-  -mSpin : Spin<short int>
-  -mGrid : Grid*
-  +getBfield() : dim3
-  +calcEnergy() : float
-  +calcEnergy(in index) : float
-  +calcMagn() : float
-  +getGrid() : Grid*
-  -flip(in value) : void
+  -mB : float3
+  -mJ : double
+  -mGrid : HB::Grid<Spin<short int>>*
+  
+  -calcEnergy(in index : dim3) : double
+  -flip(in index : dim3, in rng : gsl_rng*)
+
+  +Ising(in J : double, in B : float3)
+  +Ising(in J : double, in B : float3, in grid : HB::Grid<Spin<short int>>*)
+  +Ising(in J : double, in B : float3, in grid : HB::Grid<Spin<short int>>*, in hc : bool)
+  +calcEnergy() : double
+  +double calcMagn() :
+  +getBfield() : float3
+  +getCoupling() : double
+  +getGrid() : HB::Grid<Spin<short int>>*
+  +void setBfield(in B : float3)
+  +void setCoupling(in J : double)
+  +setGrid(in grid : HB::Grid<Spin<short int>>*)
 }
 
-HB::Model <|-- HB::Ising::Ising
-HB::Model <|-- HB::Potts::Potts
-HB::Model <|-- HB::XY::XY
-HB::Model <|-- HB::Heisenberg::Heisenberg
-HB::Grid *-- HB::Model
-HB::NB <.. HB::Grid
-HB::Grid *-- HB::Spin_t
-HB::Model *-- HB::Spin_t
+HB::Model_t <|-- HB::Ising::Ising
+HB::Model_t <|-- HB::Potts::Potts
+HB::Model_t <|-- HB::XY::XY
+HB::Model_t <|-- HB::Heisenberg::Heisenberg
+HB::Grid_t *-- HB::Model_t
+HB::NB <.. HB::Grid_t
+HB::Grid_t *-- HB::Spin_t
+HB::Model_t *-- HB::Spin_t
 HB::Heisenberg::Heisenberg *-- HB::Spin_t
 HB::XY::XY *-- HB::Spin_t
 HB::Potts::Potts *-- HB::Spin_t
 HB::Ising::Ising *-- HB::Spin_t
-HB::Index <.. HB::Model
-HB::Index <.. HB::Grid
 
 @enduml

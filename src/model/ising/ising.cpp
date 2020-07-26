@@ -1,78 +1,74 @@
-#include "include/model/ising/ising.h"
+#include "model/ising/ising.h"
 
-double HB::Ising::calcEnergy() //store initial value for energy
+double HB::Ising::Ising::calcEnergy() //store initial value for energy
 {
     int spin_sum = 0;
     int neighbour_sum = 0;
     
-    unsigned int n = m_Nx*m_Ny*m_Nz;
+    size_t n = this->mGrid->getGridSize().x*this->mGrid->getGridSize().y*this->mGrid->getGridSize().z;
     
     #pragma omp parallel for reduction(+:spin_sum,neighbour_sum)
-    for(unsigned int i = 0; i < n; ++i)
+    for(size_t i = 0; i < n; ++i)
     {
-        spin_sum += mgrid[i];
-        neighbour_sum += mgrid[i]*mgrid[mmap[1][i]];
-	if(dim > 1)
+        dim3 idx;
+        idx.x = i% this->mGrid->getGridSize().x;
+	idx.y = i/ this->mGrid->getGridSize().x%this->mGrid->getGridSize().y;
+        idx.z = i/(this->mGrid->getGridSize().x*this->mGrid->getGridSize().y);
+		 
+        short int mgrid = this->mGrid->getSpin(idx).x;
+		 
+        spin_sum += mgrid;
+        neighbour_sum += mgrid*this->mGrid->getSpin(this->mGrid->getNeighbours(idx).right).x;
+	if(this->mGrid->getDim() > 1)
 	{
-            neighbour_sum += mgrid[i]*mgrid[mmap[2][i]];
-	    if(dim > 2)
+	    neighbour_sum += mgrid*this->mGrid->getSpin(this->mGrid->getNeighbours(idx).up).x;
+	    if(this->mGrid->getDim() > 2)
 	    {
-	        neighbour_sum += mgrid[i]*mgrid[mmap[4][i]];
+  	        neighbour_sum += mgrid*this->mGrid->getSpin(this->mGrid->getNeighbours(idx).back).x;
 	    }
 	}
     }
     
-    return -(mJ*neighbour_sum + mB*spin_sum);
+    return -(mJ*neighbour_sum + mB.y*spin_sum);
 }
 
-double HB::Ising::calcEnergy(dim3 index)
+double HB::Ising::Ising::calcEnergy(dim3 index)
 {
-    int spin_sum = mgrid[random_point];
+    short int mgrid = this->mGrid->getSpin(index).x;
+    int spin_sum = mgrid;
     int neighbour_sum = 0;
    
-    neighbour_sum += mgrid[random_point]*mgrid[mmap[0][random_point]]; //mid point
-    neighbour_sum += mgrid[random_point]*mgrid[mmap[1][random_point]];
-    if(dim > 1)
+    neighbour_sum += mgrid*this->mGrid->getSpin(this->mGrid->getNeighbours(index).left).x; //mid point
+    neighbour_sum += mgrid*this->mGrid->getSpin(this->mGrid->getNeighbours(index).right).x;
+    if(this->mGrid->getDim() > 1)
     {
-        neighbour_sum += mgrid[random_point]*mgrid[mmap[2][random_point]];
-        neighbour_sum += mgrid[random_point]*mgrid[mmap[3][random_point]];
-	if(dim > 2)
+        neighbour_sum += mgrid*this->mGrid->getSpin(this->mGrid->getNeighbours(index).down).x;
+        neighbour_sum += mgrid*this->mGrid->getSpin(this->mGrid->getNeighbours(index).up).x;
+	if(this->mGrid->getDim() > 2)
 	{
-            neighbour_sum += mgrid[random_point]*mgrid[mmap[4][random_point]];
-            neighbour_sum += mgrid[random_point]*mgrid[mmap[5][random_point]];
+            neighbour_sum += mgrid*this->mGrid->getSpin(this->mGrid->getNeighbours(index).front).x;
+	    neighbour_sum += mgrid*this->mGrid->getSpin(this->mGrid->getNeighbours(index).back).x;
 	}
     }
 
-    return 2*mJ*neighbour_sum + mB*spin_sum;
+    return 2*mJ*neighbour_sum + mB.y*spin_sum;
 }
 
-double HB::Ising::calcMagn() //store initial value for energy
+double HB::Ising::Ising::calcMagn() //store initial value for energy
 {
-}
-
-void HB::Ising::MC_sweep(gsl_rng *rng) //metropolis algorithm
-{
-    unsigned int n = m_Nx*m_Ny*m_Nz;
-    double new_E = 0.0;
- 
-    #pragma omp parallel
+    int spin_sum = 0;
+    
+    size_t n = this->mGrid->getGridSize().x*this->mGrid->getGridSize().y*this->mGrid->getGridSize().z;
+    
+    #pragma omp parallel for reduction(+:spin_sum)
+    for(size_t i = 0; i < n; ++i)
     {
-
-	
-        double dE;
-	
-        #pragma omp for reduction(+:new_E)   	
-        for(unsigned int j = 0; j < n; ++j)
-	{
-    	    dE = delta_energy(j);
-	  
-            if(dE < 0 || exp(-m_beta*dE) > gsl_rng_uniform(rng))
-            {
-	        flip(j, rng);
-                new_E += dE;
-            }
-        }
+        dim3 idx;
+        idx.x = i% this->mGrid->getGridSize().x;
+	idx.y = i/ this->mGrid->getGridSize().x%this->mGrid->getGridSize().y;
+        idx.z = i/(this->mGrid->getGridSize().x*this->mGrid->getGridSize().y);
+        spin_sum += this->mGrid->getSpin(idx).x;
     }
     
-    mE += new_E;
+    return spin_sum/double(n);
 }
