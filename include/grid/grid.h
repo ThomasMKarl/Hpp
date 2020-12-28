@@ -6,8 +6,7 @@
 #include <ctime>
 #include <iostream>
 #include <hdf5.h>
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_randist.h>
+#include <random>
 
 #include <cuda_runtime.h>
 #include <thrust/host_vector.h>
@@ -26,107 +25,94 @@ namespace HB
   }NB;
 
   //! A class storing spin values represented by two angles
-  template<typename T>
-  class Spin
-  {
-   public:
-    T x; /**< polar angle */
-    T y; /**< azimuthal angle */
-  };
+  typedef struct {
+    float phi; /**< polar angle */
+    float theta; /**< azimuthal angle */
+  }Spin;
   
   //! A class storing spin values as a grid and certain meta information
   template<class T>
   class Grid
   {
    public:
-    /*****************************************************************//**
-    * \brief constructs a grid, allocates memory an initializes 
-    * neighbour tab
-    *
-    * \param dim Dimension of the spins
-    * \param gridSize Grid size
-    *********************************************************************/
-    Grid(short int dim, dim3 gridSize)
-    {
-      mDim  = dim;
-      mGridSize = gridSize;
+    Grid() = default;
 
-      mGrid.resize(gridSize.x*gridSize.y*gridSize.z);
-      this->neighbourTab();
+    /*****************************************************************//**
+    * \brief constructs a grid and allocates memory
+    *********************************************************************/
+    Grid(const short int spatialDimensions, const dim3 gridSize) : mDim(spatialDimensions), mGridSize(gridSize)
+    {
+      mGridData.resize(gridSize.x*gridSize.y*gridSize.z);
     };
 
+    /*******************************************************************//**
+    * \brief generates a table of the neighbouring points of each spin and 
+    * stores it
+    ***********************************************************************/
+    void calcNeighbourTable();
+
     /*****************************************************************//**
-    * \brief returns grid size
+    * \brief sets grid size nad resizes grid
     *********************************************************************/
+    void setGridSize(const dim3 gridSize)
+    {
+      mGridSize = gridSize;
+
+      mGridData.resize(gridSize.x*gridSize.y*gridSize.z);
+    }
+    
     dim3 getGridSize() const
     {
       return mGridSize;
     }
 
-    /*****************************************************************//**
-    * \brief sets grid size, resizes grid and computes neighbours
-    *
-    * \param gridSize Grid size
-    *********************************************************************/
-    void setGridSize(dim3 gridSize)
+    thrust::host_vector<T> getGridData() const
     {
-      mGridSize = gridSize;
-
-      mGrid.resize(gridSize.x*gridSize.y*gridSize.z);
-      this->neighbourTab();
+      return mGridData;
+    }
+    
+    void setGridData(const thrust::host_vector<T> &gridData)
+    {
+      mGridData = gridData;
     }
 
-    /*****************************************************************//**
-    * \brief returns spin value of a certain grid index
-    *
-    * \param Grid index
-    *********************************************************************/
-    T getSpin(dim3 index) const
+    thrust::host_vector<NB> getNeighbourTable() const
     {
-      size_t idx = index.x*this->mGridSize.x +
-	           index.y*this->mGridSize.x*this->mGridSize.y +
+      return mNeighbourTable;
+    }
+    
+    void setNeighbourTable(const thrust::host_vector<NB> &neighbourTable)
+    {
+      mNeighbourTable = neighbourTable;
+    }
+
+    T getSpin(const dim3 index) const
+    {
+      size_t idx = index.x*mGridSize.x +
+	           index.y*mGridSize.x*mGridSize.y +
                    index.z;
-      return this->mGrid[idx];
+      return mGridData[idx];
     }
 
-    /*****************************************************************//**
-    * \brief set specific spin to a certain value
-    *
-    * \param Grid index
-    * \param Spin value
-    *********************************************************************/
-    void setSpin(dim3 index, T s)
+    void setSpin(const dim3 index, const T spin)
     {
-      size_t idx = index.x*this->mGridSize.x +
-	           index.y*this->mGridSize.x*this->mGridSize.y +
+      size_t idx = index.x*mGridSize.x +
+	           index.y*mGridSize.x*mGridSize.y +
                    index.z;
-      this->mGrid[idx] = s;
+      mGridData[idx] = spin;
     }
-
-    /*****************************************************************//**
-    * \brief returns neighbours of a certain grid index
-    *
-    * \param grid index
-    *********************************************************************/
-    NB getNeighbours(dim3 index) const
+    
+    NB getNeighbours(const dim3 index) const
     {
-      size_t idx = index.x*this->mGridSize.x +
-	           index.y*this->mGridSize.x*this->mGridSize.y +
+      size_t idx = index.x*mGridSize.x +
+	           index.y*mGridSize.x*mGridSize.y +
                    index.z;
-      return this->mTable[idx];
+      return mNeighbourTable[idx];
     }
-
-    /*****************************************************************//**
-    * \brief returns spin dimension
-    *********************************************************************/
+    
     short int getDim() const {return mDim;}
 
-    /*****************************************************************//**
-    * \brief sets spin dimension
-    *
-    * \param dim Spin dimension
-    *********************************************************************/
-    void setDim(short int dim) { mDim = dim;}
+    void setDim(const short int dim) {mDim = dim;}
 
     /*****************************************************************//**
     * \brief initializes all spins randomly between 0 and 2*pi  
@@ -138,58 +124,35 @@ namespace HB
     * i.e. mGrid.x[...] = 0.5*pi and mGrid.y[...] = 0                        
     *********************************************************************/
     void coldStart();
-    
+
     /************************************************************************************************//**
     * \brief saves grid as hdf5 file
     *
     * \param path Path to file 
     ****************************************************************************************************/
-    herr_t saveGrid(std::string path);
-    
-    /************************************************************************************************//**
-    * \brief returns a host pointer to the grid data on the device
-    ****************************************************************************************************/
-    T *getDeviceGrid() const
-    {
-      return thrust::raw_pointer_cast(d_mGrid.data());
-    }
-    
-    /************************************************************************************************//**
-    * \brief returns a host pointer to the table data on the device
-    ****************************************************************************************************/
-    NB *getDeviceTable() const
-    {
-      return thrust::raw_pointer_cast(d_mTable.data());
-    }
+    herr_t saveGrid(const std::string path);
     
     /************************************************************************************************//**
     * \brief copies grid and table to device 
     ****************************************************************************************************/
-    void upload()
+    /*void upload(Grid<T> &deviceGrid)
     {
-      d_mGrid = mGrid;
-      d_mTable = mTable;
-    }
+      deviceGrid.setGridData(mGridData);
+      deviceGrid.setNeighbourTable(mNeighbourTable);
+      }*/
     
     /************************************************************************************************//**
     * \brief copies grid to host
     ****************************************************************************************************/
-    void download()
+    /*void download(Grid<T> &deviceGrid)
     {
-      mGrid = mGrid;
-    }
+      mGridData = deviceGrid.getGridData();
+      }*/
     
    private:
-    /*******************************************************************//**
-    * \brief generates a table of the neighbouring points of each spin and 
-    * stores it
-    ***********************************************************************/
-    void neighbourTab();
     dim3 mGridSize; /**< three dimensional grid size */
-    thrust::host_vector<T> mGrid; /**< vector containg spins in row major format on host */
-    thrust::host_vector<NB> mTable; /**< vector containing neighbouring points in row major format on host */
-    thrust::device_vector<T> d_mGrid; /**< vector containg spins in row major format on device */
-    thrust::device_vector<NB> d_mTable; /**< vector containing neighbouring points in row major format on device */
     short int mDim; /**< dimension of the spins */
+    thrust::host_vector<T> mGridData; /**< vector containg spins in row major format on host */
+    thrust::host_vector<NB> mNeighbourTable; /**< vector containing neighbouring points in row major format on device */
   };
 }

@@ -7,7 +7,7 @@ assertion
 
 matrix J
 vector B
-matix B
+matrix B
 
 worm
 potts?

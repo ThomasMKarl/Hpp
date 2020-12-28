@@ -1,0 +1,159 @@
+\documentclass[headsepline=3pt,headinclude=true,14pt]{scrartcl}
+\usepackage{scrlayer-scrpage}
+\usepackage{mwe}
+
+\usepackage[origlayout=true,automark,colors={rz}]{URpagestyles}
+
+\DeclareMathSizes{18}{18}{18}{18}
+\usepackage{float}
+\usepackage{upgreek}
+\usepackage{color}
+\usepackage{paralist}
+\usepackage[left=2cm,right=2cm,top=1cm,bottom=3cm,includeheadfoot]{geometry}
+\usepackage{listings}
+\usepackage{setspace} 
+\usepackage{graphicx}
+\usepackage{polyglossia}
+\setmainlanguage{german}
+\usepackage{booktabs}
+\usepackage{fontspec}
+%\setmainfont{Frutiger Next LT W1G}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{xcolor}
+%\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{caption}
+\usepackage{tocstyle}
+\newtocstyle[KOMAlike][leaders]{alldotted}{}
+\usetocstyle{alldotted}
+\usepackage[absolute]{textpos}
+
+\usepackage{lipsum}
+
+\usepackage[backend=biber,style=authoryear-ibid]{biblatex}
+%\addbibresource{../lit/lit.bib}
+
+\parskip=1\baselineskip
+\parindent = 0pt
+
+\usepackage[colorlinks=true,
+            linkcolor=black,
+            urlcolor=blue,
+            citecolor=red]{hyperref}
+\usepackage{array}            
+            
+\usepackage{makeidx}
+\makeindex
+
+\renewcommand*{\familydefault}{\sfdefault}
+\newcommand*{\pck}[1]{\texttt{#1}}
+\newcommand*{\code}[1]{\texttt{#1}}
+\newcommand*{\repl}[1]{\textrm{\textit{#1}}}
+\newcommand{\cmd}[1]{\par\medskip\noindent\fbox{\ttfamily#1}\par\medskip\noindent}
+\setcounter{secnumdepth}{\sectionnumdepth}
+\newsavebox{\remarkbox}
+\sbox{\remarkbox}{\emph{Anmerkung:~}}
+\newcounter{iterator}
+\usepackage{colortbl}
+%-------------------------------------------------------------------------------------------------------------
+
+\cfoot*{\thepage\ of \pageref{LastPage}}% the pagenumber in the center of the foot, also on plain pages
+\ihead*{ }% Name and title beneath each other in the inner part of the foot
+\ohead*{\headmark}
+\automark[subsection]{section}
+
+\title{Simulation des 2d Ising Modells mittels \textit{Metropolis Monte-Carlo Algorithmus} in \textit{C++/MPI}}
+\subtitle{Dokumentation}
+\date{\today}
+\author{\textbf{Thomas Karl}%\\Matriculation Number: 1631195\\ \textbf{Supervisor: Prof. Gunnar S. Bali}
+}
+
+\renewcommand{\titlepagestyle}{URtitle}       
+
+\lstset{%,
+  backgroundcolor=\color{white},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}
+  basicstyle=\footnotesize,        % the size of the fonts that are used for the code
+  breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
+  breaklines=true,                 % sets automatic line breaking
+  captionpos=b,                    % sets the caption-position to bottom
+  commentstyle=\color{green},    % comment style
+  deletekeywords={...},            % if you want to delete keywords from the given language
+  escapeinside={\%*}{*)},          % if you want to add LaTeX within your code
+  extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
+  frame=single,	                   % adds a frame around the code
+  keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
+  keywordstyle=\color{blue},       % keyword style
+  language=Octave,                 % the language of the code
+  otherkeywords={*,...},           % if you want to add more keywords to the set
+  numbers=left,                    % where to put the line-numbers; possible values are (none, left, right)
+  numbersep=5pt,                   % how far the line-numbers are from the code
+  numberstyle=\tiny\color{gray}, % the style that is used for the line-numbers
+  rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
+  showspaces=false,                % show spaces everywhere adding particular underscores; it overrides 'showstringspaces'
+  showstringspaces=false,          % underline spaces within strings only
+  showtabs=false,                  % show tabs within strings adding particular underscores
+  stepnumber=2,                    % the step between two line-numbers. If it's 1, each line will be numbered
+  tabsize=2,	                   % sets default tabsize to 2 spaces
+  title=\lstname                   % show the filename of files included with \lstinputlisting; also try caption instead of title
+}
+
+
+\begin{document}
+\begin{onehalfspace}
+\maketitle
+
+\section{Setup}
+Im Ising-Modell wird angenommen, dass die Spins, welche das magnetische Moment der Atome oder Ionen bestimmen, nur zwei diskrete Zustände annehmen können (Spinwert $\pm 1$). Die Richtung im Raum bleibt aber offen.
+
+Wir minimieren mittels Metropolis-Algorithmus den Hamiltonian:
+\begin{equation}
+H = -\frac{1}{2}\sum_{ij} J_{ij}s^z_is^z_j - B\sum_{\text{i=1}}^Vs_i^{z} ~~~ \text{mit} ~ s_i^z = \pm 1
+\end{equation}
+
+Zur Vereinfachung wählen wir die Kopplungskonstante $J_{ij}=J=1$ und das Magnetfeld $B = 0$. 
+
+Der Anfangszustand ist zufaellig gew\"ahlt: In zwei Dimensionen mit periodischen Randbedingungen sind insgesamt $V = N_x\cdot N_y$ (Volumen) Spins entweder $1$ oder $-1$. 
+
+Beim Metropolis-Algorithmus werden zuf\"allig Spins ge\"andert um neue Konfigurationen zu erzeugen. Eine neue Konfiguration wird mit der Wahrscheinlichkeit 
+
+\begin{equation}
+p = \min\left( 1, \exp\left(-\frac{\Delta E}{k_b\cdot T}\right) \right)
+\end{equation}
+
+angenommen. $\Delta E$ ist dabei die Differenz der Energie zum vorherigen Zustand, $k_b$ die Boltzmann-Konstante und $T$ die Temperatur, die auf $T=\frac{1}{10k_b}$ gesetzt wird. Bei dieser Temperatur sollten sich alle Spins gleich ausrichten und die Simulation liefert pro Volumen die Gesamtenergie $-2$.
+
+Wir fordern eine quadratische Anzahl an Prozessorkernen und eine Anzahl an Spins derart, dass allen Prozessen die gleiche Anzahl an Gitterpunkten übergeben werden kann (Abb. \ref{ranks}). Die Spins werden in einem linearsierten Array gespeichert. Jeder Kern speichert seinen Teil des Gitters sowie dessen Rand. Jeder Kern führt unabhängig seinen Updateprozess durch und berechnet seinen Anteil an der Gesamtenergie $E$. So entstehen vier getrennte Konfigurationen. Danach müssen durch eine Summenreduktion die Teilenergien aufaddiert und wieder den einzelnen Kernen übergeben werden.
+
+Bevor es zum nächsten Monte-Carlo Schritt kommt, muss ein Randaustausch durchgeführt werden. Der innere Rand (blau im Bild) muss nun in den äußeren Rand des benachbarten Gitters (rot im Bild) geschrieben werden (periodische Randbedingungen). Rank 1 zum Beispiel muss seinen rechten Rand in den linken Rand seines rechten Nachbars (Rank 0) schreiben. Folglich ist jeder Prozess Teil eines vertikalen und eines horizontalen Rings. Da der Randaustausch eine Größenordnung unter der Komplexität des Updates liegt, sollte für ein großes Gitter der Randaustausch vernachlässigbar sein.
+
+Um ein \textit{deadlock} zu vermeiden, senden zuerst die diagonalen Prozesse, während die anderen Empfangen. Danach wird getauscht.
+\begin{figure}
+\input{ranks.tex}
+\caption{Graphische Darstellung des Prozessorlayouts. Die Gitter sind über periodische Randbedingungen vertikal und horizontal über einen Ring miteinander verbunden. Zwischen den Monte-Carl Schritten schreibt jeder Kern seinen inneren Rand (blau) in den äußeren Rand (rot) des Nachbarn.}
+\label{ranks}
+\end{figure}
+
+\newpage
+\section{Auswertung}
+Es wurden jeweils 10 Simulationen mit 10000 Schritten durchgef\"uhrt und die Laufzeit gemittelt. Diese wurden doppelt-logarithmisch f\"ur verschiedene Kernzahlen gegen die L\"ange des Gitters $s=N_x=N_y=\sqrt{V}$ aufgetragen (Abb. \ref{plot}).
+
+\begin{figure}[h]
+\scalebox{1.1}{%
+\input{ising.pgf}
+}
+\caption{Verbrauchte Rechenzeit gegen die L\"ange des Gitters f\"ur alle drei Kernzahlen und Fitfunktionen auf doppelt-logarithmischer Skala.}
+\label{plot}
+\end{figure}
+
+Der Algorithmus funktioniert nur, falls es sich bei der Anzahl der Kerne um eine Quadratzahl handelt.
+
+Da mit $s$ das Volumen quadratisch steigt, also auch die Zahl der zu bearbeitenden Spins, hat der Algorithmus das Laufzeitverhalten $\mathcal{O}(s^2)$.
+
+Die Fitkonstante im Exponenten liefert nicht wie erwartet $2$. Das liegt daran, dass beim Fitten davon ausgegangen wurde, dass Anteile, die linear mit $s$ wachsen, vernachl\"ssigbar seien. Gerade f\"ur kleine Gittergr\"o\ss en trifft dies aber nicht zu. 
+
+Setzt man den Exponenten auf einen festen Wert und fittet nur den Vorfaktor, so ergeben sich Speedups von 3,5 und 4,84. Die Abweichung zum maximalen Speedup 6 im zweiten Fall ergibt sich dadurch, dass die Simulation mit einer Quadratzahl von Prozessen (also 9) gestartet werden muss. Bei der H\"alfte der Zeit bleiben also die H\"alfte der Kerne unbesch\"aftigt ($6 - 1,5 = 4,5$).
+
+\end{onehalfspace}
+\end{document}

@@ -8,6 +8,8 @@ using std::vector;
 class Heisenberg : public Model
 {
  public:
+  using SimulationStrategy = std::function<void(const Heisenberg&)>;
+  
   /******************************************************************************************//**
   * \brief Constructs a Heisenberg Model.                                                   
   *                                                                                        
@@ -34,8 +36,9 @@ class Heisenberg : public Model
   void flip(unsigned int, gsl_rng*) final;
   
  private:
-  vector<double> mgrid_phi; ///< A vector containing double values. They represent the polar angulars between 0 and 2*pi of spins of unit length. The position in the grid (x,y,z) is (index%m_Nx, index/m_Nx%m_Ny, index/(m_Nx*m_Ny)) wher / denotes an integer division and % a modulo operation.
-  vector<double> mgrid_theta; ///< A vector containing double values. They represent the azimutal angulars between 0 and pi of spins of unit length. The position in the grid (x,y,z) is (index%m_Nx, index/m_Nx%m_Ny, index/(m_Nx*m_Ny)) wher / denotes an integer division and % a modulo operation.
+  void simulate() const override {mS(*this);}
+  
+  SimulationStrategy mS;
 };
 
 #endif

@@ -1,0 +1,161 @@
+\documentclass[headsepline=3pt,headinclude=true,14pt]{scrartcl}
+\usepackage{scrlayer-scrpage}
+\usepackage{mwe}
+
+\usepackage[origlayout=true,automark,colors={rz}]{URpagestyles}
+
+\DeclareMathSizes{18}{18}{18}{18}
+\usepackage{float}
+\usepackage{upgreek}
+\usepackage{color}
+\usepackage{paralist}
+\usepackage[left=2cm,right=2cm,top=1cm,bottom=3cm,includeheadfoot]{geometry}
+\usepackage{listings}
+\usepackage{setspace} 
+\usepackage{graphicx}
+\usepackage{polyglossia}
+\setmainlanguage{english}
+\usepackage{booktabs}
+\usepackage{fontspec}
+%\setmainfont{Frutiger Next LT W1G}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{xcolor}
+%\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{caption}
+\usepackage{tocstyle}
+\newtocstyle[KOMAlike][leaders]{alldotted}{}
+\usetocstyle{alldotted}
+\usepackage[absolute]{textpos}
+
+\usepackage{lipsum}
+
+\usepackage[backend=biber,style=authoryear-ibid]{biblatex}
+%\addbibresource{../lit/lit.bib}
+
+\parskip=1\baselineskip
+\parindent = 0pt
+
+\usepackage[colorlinks=true,
+            linkcolor=black,
+            urlcolor=blue,
+            citecolor=red]{hyperref}
+\usepackage{array}            
+            
+\usepackage{makeidx}
+\makeindex
+
+\renewcommand*{\familydefault}{\sfdefault}
+\newcommand*{\pck}[1]{\texttt{#1}}
+\newcommand*{\code}[1]{\texttt{#1}}
+\newcommand*{\repl}[1]{\textrm{\textit{#1}}}
+\newcommand{\cmd}[1]{\par\medskip\noindent\fbox{\ttfamily#1}\par\medskip\noindent}
+\setcounter{secnumdepth}{\sectionnumdepth}
+\newsavebox{\remarkbox}
+\sbox{\remarkbox}{\emph{Anmerkung:~}}
+\newcounter{iterator}
+\usepackage{colortbl}
+%-------------------------------------------------------------------------------------------------------------
+
+\cfoot*{\thepage\ of \pageref{LastPage}}% the pagenumber in the center of the foot, also on plain pages
+\ihead*{ }% Name and title beneath each other in the inner part of the foot
+\ohead*{\headmark}
+\automark[subsection]{section}
+
+\title{Simulation of the 2d Ising model using \textit{Metropolis Monte-Carlo algorithm} in \textit{C++/MPI}}
+\subtitle{Documentation}
+\date{\today}
+\author{\textbf{Thomas Karl}%\\Matriculation Number: 1631195\\ \textbf{Supervisor: Prof. Gunnar S. Bali}
+}
+
+\renewcommand{\titlepagestyle}{URtitle}       
+
+\lstset{%,
+  backgroundcolor=\color{white},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}
+  basicstyle=\footnotesize,        % the size of the fonts that are used for the code
+  breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
+  breaklines=true,                 % sets automatic line breaking
+  captionpos=b,                    % sets the caption-position to bottom
+  commentstyle=\color{green},    % comment style
+  deletekeywords={...},            % if you want to delete keywords from the given language
+  escapeinside={\%*}{*)},          % if you want to add LaTeX within your code
+  extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
+  frame=single,	                   % adds a frame around the code
+  keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
+  keywordstyle=\color{blue},       % keyword style
+  language=Octave,                 % the language of the code
+  otherkeywords={*,...},           % if you want to add more keywords to the set
+  numbers=left,                    % where to put the line-numbers; possible values are (none, left, right)
+  numbersep=5pt,                   % how far the line-numbers are from the code
+  numberstyle=\tiny\color{gray}, % the style that is used for the line-numbers
+  rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
+  showspaces=false,                % show spaces everywhere adding particular underscores; it overrides 'showstringspaces'
+  showstringspaces=false,          % underline spaces within strings only
+  showtabs=false,                  % show tabs within strings adding particular underscores
+  stepnumber=2,                    % the step between two line-numbers. If it's 1, each line will be numbered
+  tabsize=2,	                   % sets default tabsize to 2 spaces
+  title=\lstname                   % show the filename of files included with \lstinputlisting; also try caption instead of title
+}
+
+
+\begin{document}
+\begin{onehalfspace}
+\maketitle
+
+\section{Setup}
+Im Ising-Modell wird angenommen, dass die Spins, welche das magnetische Moment der Atome oder Ionen bestimmen, nur zwei diskrete Zustände annehmen können (Spinwert $\pm 1$). Die Richtung im Raum bleibt aber offen.
+
+Using the Metropolis-Algorithmus we minimize the hamiltonian,
+\begin{equation}
+H = -\frac{1}{2}\sum_{ij} J_{ij}s^z_is^z_j - B\sum_{\text{i=1}}^Vs_i^{z} ~~~ \text{with} ~ s_i^z = \pm 1.
+\end{equation}
+
+For simplification we set the coupling constant $J_{ij}=J=1$ und the magnetic field $B = 0$. 
+
+The initial state is random: In two dimensions with periodic boundary conditions the $V = N_x\cdot N_y$ (volume) spins are $1$ or $-1$. 
+
+\newpage
+The Metropolis-algorithm flips spins randomly to create new configurations. A new configuration gets chosen with the probability, 
+
+\begin{equation}
+p = \min\left( 1, \exp\left(-\frac{\Delta E}{k_b\cdot T}\right) \right).
+\end{equation}
+
+$\Delta E$ denotes the difference between the energy of the new and the last configuration, $k_b$ is the Boltzmann constant and $T$ is the temperature, which we set to $T=\frac{1}{10k_b}$. At this temperature all spins should align equally and the simulation computes the minimum energy as $-2J$.
+
+We require a quadratic number of CPU cores and a number of spins so, that each process has the same number in its memory  (Abb. \ref{ranks}). All spins are stored in a linear array. Each core stores its part of the grid including the bounds. Each core fulfills an update process independently and computes its part of the overall energy $E$. So  we have four seperated configurations. After that, one core has to make a sum reduction to add all partial energies and broadcast the sum over all cores.
+
+We hav to make an exchange of the bonds before the next Monte-Carlo step. The inner bond (blue in the picture) has to be written in the outer bond of the neighbouring (periodic boundary conditions) grid (red in the picture). Rank 1 for example has to write its right rim in the left one of its right neighbour (Rank 0). Therefore, each prcess is part of a vertical and ahorizontal ring. The exchange of bonds lies one order of magnitude below the complexity of the updates. Therefore, the exchange should be negliable for a sufficiently large grid.
+
+In order to avoid a \textit{deadlock}, the diagonal processes are sending at first, the other ones are receiving. After that they switch.
+
+\begin{figure}
+\input{ranks.tex}
+\caption{Graphical representation of the CPU layout. The grids are via periodic boundary conditions vertically and horizontally in rings connected. Between the Monte-Carl steps each core writes its inner bond (blue) in the outer bond (red) of its neighbour.}
+\label{ranks}
+\end{figure}
+
+\newpage
+\section{Evaluation}
+We evaluated the mean runtimes of 10 simulations with 10000 steps each. They were plotted for different number of processes against the length $s=N_x=N_y=\sqrt{V}$ in log-log scale (Abb. \ref{plot}).
+
+\begin{figure}[h]
+\scalebox{1.1}{%
+\input{ising.pgf}
+}
+\caption{Runtime against length of the grid for three different numbers of processes and corressponding fitting functions in log-log scale.}
+\label{plot}
+\end{figure}
+
+The algorith only works if the number of cores is a quadratic number.
+
+With $s$ the volume rises quadratically, so does the number of spins to be updated. Therefore, the algorithm has the complexity $\mathcal{O}(s^2)$.
+
+The fitting constant in the exponent does not hold as expected $2$. That is because we made the assumption in the fitting procedure, that parts of the algorithm, which rise linearly with $s$, are negliable. That is not true, especially for small grids. 
+
+If we set the exponent to a fixed value and fit only the prefactor, we have ppeedups of 3.5 and 4.84. The deviation from the maximum speedup of 6 in the second case comes from the fact, that the simulation has to be started with a quadratic number of processes (that means 9). Half of the time half of the cores remain inactive ($6 - 1.5 = 4.5$).
+
+\end{onehalfspace}
+\end{document}
