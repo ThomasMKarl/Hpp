@@ -1,6 +1,6 @@
 #include "model/ising/ising.h"
 
-float HB::Ising::Ising::calcEnergy(const HB::Grid<short int> &grid) //store initial value for energy
+float HB::Ising::Ising::calcEnergy(HB::Grid<short int> &grid) const//store initial value for energy
 {
     int spin_sum = 0;
     int neighbour_sum = 0;
@@ -14,30 +14,31 @@ float HB::Ising::Ising::calcEnergy(const HB::Grid<short int> &grid) //store init
         idx.x = i% grid.getGridSize().x;
 	idx.y = i/ grid.getGridSize().x%grid.getGridSize().y;
         idx.z = i/(grid.getGridSize().x*grid.getGridSize().y);
-		 
+ 
         short int mgrid = grid.getSpin(idx);
-		 
+
         spin_sum += mgrid;
         neighbour_sum += mgrid*grid.getSpin(grid.getNeighbours(idx).right);
+	
 	if(grid.getDim() > 1)
 	{
 	    neighbour_sum += mgrid*grid.getSpin(grid.getNeighbours(idx).up);
 	    if(grid.getDim() > 2)
 	    {
-  	        neighbour_sum += mgrid*grid.getSpin(grid.getNeighbours(idx).back);
+	      neighbour_sum += mgrid*grid.getSpin(grid.getNeighbours(idx).back); 
 	    }
 	}
     }
-    
+    std::cout << "!!!!" << neighbour_sum;
     return -(mJ*neighbour_sum + mB.y*spin_sum);
 }
 
-float HB::Ising::Ising::calcEnergy(const HB::Grid<short int> &grid, const dim3 index)
+float HB::Ising::Ising::calcEnergy(HB::Grid<short int> &grid, const dim3 index) const
 {
     const short int mgrid = grid.getSpin(index);
     int spin_sum = mgrid;
     int neighbour_sum = 0;
-   
+	
     neighbour_sum += mgrid*grid.getSpin(grid.getNeighbours(index).left); //mid point
     neighbour_sum += mgrid*grid.getSpin(grid.getNeighbours(index).right);
     if(grid.getDim() > 1)
@@ -54,7 +55,7 @@ float HB::Ising::Ising::calcEnergy(const HB::Grid<short int> &grid, const dim3 i
     return 2*mJ*neighbour_sum + mB.y*spin_sum;
 }
 
-float HB::Ising::Ising::calcMagnetization(const HB::Grid<short int> &grid) //store initial value for energy
+float HB::Ising::Ising::calcMagnetization(HB::Grid<short int> &grid) const//store initial value for energy
 {
     int spin_sum = 0;
     
@@ -74,7 +75,7 @@ float HB::Ising::Ising::calcMagnetization(const HB::Grid<short int> &grid) //sto
     return spin_sum/float(n);
 }
 
-void HB::Ising::Ising::flip(const dim3 index, Grid<short int> &grid)
+void HB::Ising::Ising::flip(const dim3 index, Grid<short int> &grid) const
 {
     grid.setSpin(index, -grid.getSpin(index));
 }

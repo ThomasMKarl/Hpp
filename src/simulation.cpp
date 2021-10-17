@@ -7,41 +7,7 @@ void HB::setupKernel(curandState *state, size_t seed, size_t n)
   curand_init(seed, id, 0, &state[id]);
 }*/
 
-template <class M>
-float HB::MetropolisSimulation::metropolisSweep(const M &model)
-{
-    float new_E = 0.0;
-
-    const dim3 N = mGrid->getGridSize();  
-    const size_t V = N.x*N.y*N.z;
-    	
-    float dE;
-    dim3 idx;
-    
-    #pragma omp parallel for reduction(+:new_E) private(dE,idx)   	
-    for(size_t j = 0; j < V; ++j)
-    {
-        std::random_device device;
-        std::mt19937 generator(device());
-        std::uniform_real_distribution<float> distribution(0,1);
-	
-        idx.x = j% N.x;
-	idx.y = j/ N.x%N.y;
-        idx.z = j/(N.x*N.y);
-	    
-    	dE = model.calcEnergy(mGrid, idx);
-	  
-        if(dE < 0 || exp(-mBeta*dE) > distribution(generator))
-        {
-	    model.flip(idx);
-            new_E += dE;
-        }
-    }
-    
-    return new_E;
-}
-
-template <class M>
+/*template <class M>
 float HB::MetropolisSimulationQt::metropolisSweep(const M &model)
 {
     float new_E = 0.0;
@@ -73,7 +39,7 @@ float HB::MetropolisSimulationQt::metropolisSweep(const M &model)
     }
     
     return new_E;
-}
+    }*/
 
 /*template <typename T>
 __global__
@@ -150,30 +116,9 @@ void HB::metropolisRun(M &model, HB::DeviceGrid &grid, T beta, size_t steps, std
     CUDA_CALL(cudaFree(devStates));
 }*/
 
-template <class M>
-void HB::MetropolisSimulation::simulate(const M &model)
-{
-    mEnergies.resize(0);
-    mMagnetization.resize(0);
 
-    float energy = model.calcEnergy(mGrid);
 
-    const dim3 N = mGrid->getGridSize();
-    const double Volume = double(N.x*N.y*N.z);
-
-    mEnergies.push_back(energy/Volume);
-    mMagnetization.push_back(model.calcMagn(mGrid)/Volume);
-    
-    for(size_t i = 0; i < mSteps; ++i)
-    {
-      energy += metropolisSweep(model);
-      //std::cout << i << " " << energy/V << std::endl;
-      mEnergies.push_back(energy/Volume);
-      mMagnetization.push_back(model.calcMagn(mGrid)/Volume);
-    }    
-}
-
-template <class M>
+/*template <class M>
 void HB::MetropolisSimulationQt::simulate(const M &model)
 {
     QPainter qp(this);
@@ -200,9 +145,9 @@ void HB::MetropolisSimulationQt::simulate(const M &model)
 	    //draw white point if spin 1, black if -1
         }
     }   
-}
+    }*/
 
-template <class M>
+/*template <class M>
 void HB::SimulatedAnnealing::simulate(const M &model)
 {
     mEnergies.resize(0);
@@ -231,15 +176,7 @@ void HB::SimulatedAnnealing::simulate(const M &model)
 	    }
         }
     }
-}
-
-void simulate(const HB::Models &models)
-{
-   for(const auto &model : models)
-   {
-     model->simulate();
-   }
-}
+}*/
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 

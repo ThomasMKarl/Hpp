@@ -56,13 +56,13 @@ namespace HB
     * \brief calculates the overall energy of the underlying grid according 
     * to the model
     ********************************************************************************/
-    virtual float calcEnergy(const Grid<short int> &grid) = 0;
+    virtual float calcEnergy(Grid<short int> &grid) const = 0;
 
     /****************************************************************************//**
     * \brief calculates the overall magnetization of the underlying grid according 
     * to the model
     ********************************************************************************/
-    virtual float calcMagnetization(const Grid<short int> &grid) = 0;
+    virtual float calcMagnetization(Grid<short int> &grid) const = 0;
     
     /****************************************************************************//**
     * \brief returns the magnetic flux density of the model 
@@ -94,7 +94,7 @@ namespace HB
     *
     * \param index Index of the flipped spin
     ********************************************************************************/
-    virtual float calcEnergy(const Grid<short int> &grid, const dim3 index) = 0;
+    virtual float calcEnergy(Grid<short int> &grid, const dim3 index) const = 0;
 
     /****************************************************************************//**
     * \brief flips randomly a spin
@@ -105,11 +105,11 @@ namespace HB
     * \param index Index of the spin to be flipped
     * \param rng Pointer to the state of GSL RNG
     ********************************************************************************/
-    virtual void flip(const dim3 index, Grid<short int> &grid) = 0;
-
-    virtual void simulate() const = 0;
+    virtual void flip(const dim3 index, Grid<short int> &grid) const = 0;
     
-    float3 mB; /**< absolute value of an external, homogenous magnetic field */
-    float mJ; /**< coupling constant */
+    float3 mB{0.0f,0.0f,0.0f}; /**< absolute value of an external, homogenous magnetic field */
+    float mJ{1.0f}; /**< coupling constant */
 };
+
+    using Models = thrust::host_vector<std::unique_ptr<Model>>;
 }

@@ -8,11 +8,14 @@ void HB::Grid<T>::calcNeighbourTable()
     const size_t m_Nz = mGridSize.z;
     const size_t n = m_Nx*m_Ny*m_Nz;
     mNeighbourTable.resize(n);
-        	
+
+    #pragma omp parallel
+    {
     size_t i = 0;
     size_t j = 0;
     size_t k = 0;
-    #pragma omp parallel for private(i,j,k)
+      
+    #pragma omp for
     for(size_t h = 0; h < n; ++h)
     {
             i = h%m_Nx;
@@ -44,63 +47,74 @@ void HB::Grid<T>::calcNeighbourTable()
                     else            mNeighbourTable[m_Ny*m_Nx*k + m_Nx*j + i].back = m_Ny*m_Nx*(k+1) + m_Nx*j + i;
 	        }
 		
-		std::cout << h << " " << i << " " << j << " " << k << "\n";
+		//std::cout << h << " " << i << " " << j << " " << k << "\n";
 	}
 
-	std::cout << mNeighbourTable[m_Ny*m_Nx*k + m_Nx*j + i].left  << " "
+	    /*std::cout << mNeighbourTable[m_Ny*m_Nx*k + m_Nx*j + i].up    << " "
 		  << mNeighbourTable[m_Ny*m_Nx*k + m_Nx*j + i].right << " "
-		  << mNeighbourTable[m_Ny*m_Nx*k + m_Nx*j + i].up    << " "
+		  << mNeighbourTable[m_Ny*m_Nx*k + m_Nx*j + i].back  << " "
 		  << mNeighbourTable[m_Ny*m_Nx*k + m_Nx*j + i].down  << " "
-		  << mNeighbourTable[m_Ny*m_Nx*k + m_Nx*j + i].front << " "
-		  << mNeighbourTable[m_Ny*m_Nx*k + m_Nx*j + i].back  << "\n\n";
+		  << mNeighbourTable[m_Ny*m_Nx*k + m_Nx*j + i].left  << " "
+		  << mNeighbourTable[m_Ny*m_Nx*k + m_Nx*j + i].front << "\n\n";*/
+    }
     }
 }
 
 template<>
 void HB::Grid<float>::hotStart() //all spins 1
 {  
-    #pragma omp parallel for
+    #pragma omp parallel
+    {
+    std::random_device device;
+    std::mt19937 generator(device());
+    std::uniform_real_distribution<float> distribution(0,1);
+
+    #pragma omp for
     for(size_t i = 0; i < mGridSize.x*mGridSize.y*mGridSize.z; ++i)
     {
-	std::random_device device;
-        std::mt19937 generator(device());
-        std::uniform_real_distribution<float> distribution(0,1);
 	mGridData[i]   = 2.0f*M_PI*distribution(generator);
+    }
     }
 }
 
 template<>
 void HB::Grid<short int>::hotStart() //all spins 1
 {  
-    #pragma omp parallel for
-    for(size_t i = 0; i < mGridSize.x*mGridSize.y*mGridSize.z; ++i)
+    #pragma omp parallel
     {
-        std::random_device device;
-        std::mt19937 generator(device());
-        std::uniform_int_distribution<short int> distribution(0,1);
-	  
-	if(distribution(generator) == 1) mGridData[i] =  1;
-	else                             mGridData[i] = -1;
+    std::random_device device;
+    std::mt19937 generator(device());
+    std::uniform_real_distribution<float> distribution(0,1);
+    
+    #pragma omp for
+    for(size_t i = 0; i < mGridSize.x*mGridSize.y*mGridSize.z; ++i)
+    {	  
+	if(distribution(generator) >= 0.5) mGridData[i] =  1;
+	else                               mGridData[i] = -1;
+    }
     }
 }
 
 template<>
 void HB::Grid<HB::Spin>::hotStart() //all spins 1
 {  
-    #pragma omp parallel for
-    for(size_t i = 0; i < mGridSize.x*mGridSize.y*mGridSize.z; ++i)
+    #pragma omp parallel
     {
-	std::random_device device;
-        std::mt19937 generator(device());
-        std::uniform_real_distribution<float> distribution(0,1);
-	  
+    std::random_device device;
+    std::mt19937 generator(device());
+    std::uniform_real_distribution<float> distribution(0,1);
+    
+    #pragma omp for
+    for(size_t i = 0; i < mGridSize.x*mGridSize.y*mGridSize.z; ++i)
+    {	  
 	mGridData[i].phi   = 2.0*M_PI*distribution(generator);
 	mGridData[i].theta = 2.0*M_PI*distribution(generator);
     }
+    }
 }
 
-template<class T>
-void HB::Grid<T>::coldStart() //all spins 1
+template<>
+void HB::Grid<float>::coldStart() //all spins 1
 { 
     #pragma omp parallel for
     for(size_t i = 0; i < mGridSize.x*mGridSize.y*mGridSize.z; ++i)

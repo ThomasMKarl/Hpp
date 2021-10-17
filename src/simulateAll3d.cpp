@@ -27,7 +27,7 @@ int main(int argc, char **argv)
     
     if(argc < 10)
     {
-      std::cout << "Usage: ising <temp> <J> <dim> <Bx> <By> <Bz> <Nx> <Ny> <Nz> <max_step> <hot_start (true/false)> <number of cores>\n";
+      std::cout << "Usage: " << argv[0] << " <temp> <J> <dim> <Bx> <By> <Bz> <Nx> <Ny> <Nz> <max_step> <hot_start (true/false)> <number of cores>\n";
       return EXIT_FAILURE;
     }
     uint arg = 0;
@@ -45,18 +45,15 @@ int main(int argc, char **argv)
     size_t steps = atof(argv[++arg]);
     bool hot_start = argv[++arg];
 
-    Grid<short int> grid(dim, N);
+    SintGrid grid(dim, N);
     grid.calcNeighbourTable();
-    grid.hotStart();
+    grid.coldStart();
     
-    //Models models;
-    //MetropolisSimulation s{grid,beta,1000};
-    //models.push_back(std::make_unique<Ising>(J,B,{grid,beta,1000}));
-    //models.push_back(std::make_unique<Heisenberg>(J,B,s));
-    
-    std::vector<double> energies;
-    std::vector<double> magn;
-    //simulate(models);
+    MetropolisSimulation simulation{};
+    Ising::Ising I(J,B);
+    I.calcEnergy(grid);
+    //std::vector<float> energies, magnetizations;
+    //simulation(I,grid,beta,steps,energies,magnetizations);
     
     /*removeCorr(energies);
     removeCorr(magn);

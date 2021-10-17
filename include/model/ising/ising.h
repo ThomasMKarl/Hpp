@@ -1,42 +1,33 @@
 #pragma once
 
 #include "model/model.h"
+#include "simulation.h"
 
 namespace HB::Ising
 {  
 class Ising : public Model
 {
- public:
-  using SimulationStrategy = std::function<void(const Ising&)>;
-  
-  Ising(float J, float3 B, SimulationStrategy s) : Model(J, B), mS(s) {};
+ public:  
+  Ising(float J, float3 B) : Model(J, B) {};
 
   /****************************************************//**
   * \brief Computes the overall energy of the entire grid 
   ********************************************************/
-  float calcEnergy(const Grid<short int> &grid) final;
+  float calcEnergy(Grid<short int> &grid) const final;
 
   /***********************************************************//**
   * \brief Computes the overall magnetization of the entire grid 
   ***************************************************************/
-  float calcMagnetization(const Grid<short int> &grid) final;
+  float calcMagnetization(Grid<short int> &grid) const final;
 
- private:
   /*******************************************************************//**
   * \brief Computes the energy difference, when random_point is flipped.  
   ***********************************************************************/
-  float calcEnergy(const Grid<short int> &grid, const dim3 index) final;
+  float calcEnergy(Grid<short int> &grid, const dim3 index) const final;
   
   /*********************************************************************//**
   * \brief Computes the energy difference, when a random point is flipped.  
   *************************************************************************/
-  void flip(const dim3 index, Grid<short int> &grid) final;
-  
-  void simulate() const override
-  {
-    mS(*this);
-  }
-  
-  SimulationStrategy mS;
+  void flip(const dim3 index, Grid<short int> &grid) const final;
 };
 }
